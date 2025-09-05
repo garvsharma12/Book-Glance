@@ -4,6 +4,7 @@
 
 Have you ever been at a book sale, library, or friend's house looking at shelves of books but didn't recognize any titles or authors? BookGlance solves the problem of figuring out what to read by using AI to help you discover what you'll enjoy.
 
+[BookGlance.io](https://bookglance.io/)
 
 ## What It Does
 
@@ -114,8 +115,8 @@ GOOGLE_VISION_API_KEY=your_google_vision_key
 
 ### API Key Setup
 
-**Gemini API** (Required - for book summaries and recommendations):
-1. Visit [GeminiAPI Platform](https://aistudio.google.com)
+**OpenAI API** (Required - for book summaries and recommendations):
+1. Visit [OpenAI Platform](https://platform.openai.com)
 2. Create an account and add billing
 3. Generate an API key in the API Keys section
 
@@ -244,7 +245,7 @@ For any licensing inquiries or permission requests, please contact shelfscannera
 ## 🆘 Support
 
 - **Issues**: Create a GitHub issue for bugs or feature requests
-- **Email**: garv.sharma1202@gmail.com
+- **Email**: shelfscannerapp@gmail.com
 
 ---
 

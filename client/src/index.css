@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Light theme */
+  --background: 0 0% 100%; /* White background */
+  --foreground: 222.2 84% 4.9%; /* Dark text */
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%; /* White cards */
+  --card-foreground: 222.2 84% 4.9%; /* Dark text in cards */
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  
+  /* Violet primary color */
+  --primary: 265 89% 58%; /* Violet */
+  --primary-foreground: 210 40% 98%;
+  
+  /* Subtle secondary color */
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  
+  /* Subtle accent color for highlights */
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --ring: 214 100% 50%; /* Match primary for focus rings */
+  --radius: 0.5rem;
+  
+  /* Sidebar colors */
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 222.2 84% 4.9%;
+  --sidebar-primary: 214 100% 50%;
+  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-accent: 210 40% 96.1%;
+  --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+  --sidebar-border: 214.3 31.8% 91.4%;
+  --sidebar-ring: 214 100% 50%;
+}
+
+.dark {
+  /* Black background */
+  --background: 0 0% 0%;
+  --foreground: 210 40% 98%;
+  
+  /* Gray boxes */
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20.2% 75%;
+  --popover: 222 20% 15%;
+  --popover-foreground: 210 40% 98%;
+  --card: 222 20% 15%;
+  --card-foreground: 210 40% 98%;
+  
+  /* Brighter borders for contrast */
+  --border: 217 33% 25%;
+  --input: 217 33% 25%;
+  
+  /* Keep primary color vibrant but slightly adjusted for dark mode */
+  --primary: 265 89% 58%;
+  --primary-foreground: 210 40% 98%;
+  
+  /* Secondary color for dark theme */
+  --secondary: 217 33% 25%;
+  --secondary-foreground: 210 40% 98%;
+  
+  /* Accent color for dark theme */
+  --accent: 217 33% 25%;
+  --accent-foreground: 210 40% 98%;
+  
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --ring: 265 89% 58%;
+  
+  /* Sidebar colors for dark theme */
+  --sidebar-background: 0 0% 0%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-primary: 265 89% 58%;
+  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-accent: 217 33% 25%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 217 33% 25%;
+  --sidebar-ring: 265 89% 58%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
