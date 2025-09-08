@@ -13,11 +13,11 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
 
   const handleDonate = () => {
     // Open PayPal donation link in new tab
-    window.open(
-  "https://www.paypal.com/donate/?business=S8Z878CBE5F3U&no_recurring=0&item_name=Thanks+for+supporting+BookGlance%21&currency_code=USD",
-      "_blank",
-      "noopener,noreferrer"
-    );
+      window.open(
+        "https://paypal.me/garv1202",
+        "_blank",
+        "noopener,noreferrer"
+      );
     onClose();
   };
 
