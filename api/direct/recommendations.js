@@ -25,9 +25,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Import the OpenAI recommendations function
-    const { getOpenAIRecommendations } = await import('../../server/openai-recommendations.js');
-    const { log } = await import('../../server/simple-logger.js');
+  // Import recommendation utilities
+  const { getOpenAIRecommendations } = await import('../../server/openai-recommendations.js');
+  const { getRecommendations } = await import('../../server/books.js');
+  const { bookCacheService } = await import('../../server/book-cache-service.js');
+  const { log } = await import('../../server/simple-logger.js');
 
 
 
@@ -45,20 +47,31 @@ export default async function handler(req, res) {
     
     log(`Processing direct OpenAI recommendation request with ${books.length} books`, "openai");
 
-    // Check OpenAI API key
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(400).json({
-        success: false,
-        message: "OpenAI API key is not configured. Please add it to your environment variables."
-      });
-    }
+    // Decide path: Gemini-first unless explicitly using OpenAI
+    const useOpenAI = process.env.USE_OPENAI_RECS === 'true' && !!process.env.OPENAI_API_KEY;
     
     // Log the request details for debugging
     log(`Processing recommendation request for ${books.length} books with preferences: ${JSON.stringify(preferences || {})}`, "openai");
     
     try {
-      // Get base recommendations from OpenAI
-      const baseRecommendations = await getOpenAIRecommendations(books, preferences || {}, deviceId);
+      let baseRecommendations;
+      if (!useOpenAI) {
+        log("Using Gemini-first recommendations path (OpenAI disabled or not configured)", "openai");
+        // Enhance the input books (ratings/summaries via Gemini where needed)
+        const enhancedInputBooks = await Promise.all(books.map(async (b) => {
+          try {
+            const rating = await bookCacheService.getEnhancedRating(b.title, b.author, b.isbn);
+            const summary = await bookCacheService.getEnhancedSummary(b.title, b.author, b.summary);
+            return { ...b, rating, summary };
+          } catch {
+            return b;
+          }
+        }));
+        baseRecommendations = await getRecommendations(enhancedInputBooks, preferences || {});
+      } else {
+        // Get base recommendations from OpenAI
+        baseRecommendations = await getOpenAIRecommendations(books, preferences || {}, deviceId);
+      }
       
       // Make sure we received recommendations from OpenAI
       if (!baseRecommendations || baseRecommendations.length === 0) {
@@ -70,7 +83,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // Enhance each recommendation with cached or fresh OpenAI data
+      // Enhance each recommendation with cached or fresh LLM data
       const enhancedRecommendations = await Promise.all(baseRecommendations.map(async (book) => {
         try {
           // Find the original book from the user's list to get the cover URL
@@ -120,15 +133,19 @@ export default async function handler(req, res) {
             }
           }
           
-          // If we still don't have a description, get it from OpenAI
+          // If we still don't have a description, try Gemini-first; fallback to OpenAI if configured
           if (!description || description.length < 100) {
-            const { getOpenAIDescription } = await import('../../server/openai-descriptions.js');
-            description = await getOpenAIDescription(book.title, book.author);
+            const summary = await bookCacheService.getEnhancedSummary(book.title, book.author);
+            if (summary && summary.length >= 50) {
+              description = summary;
+            } else if (useOpenAI) {
+              const { getOpenAIDescription } = await import('../../server/openai-descriptions.js');
+              description = await getOpenAIDescription(book.title, book.author);
+            }
           }
           
-          // If we still don't have a rating, get it from OpenAI
+          // If we still don't have a rating, try Gemini-first; fallback to OpenAI if configured
           if (!rating || rating === "0") {
-            const { bookCacheService } = await import('../../server/book-cache-service.js');
             rating = await bookCacheService.getEnhancedRating(book.title, book.author, isbn);
           }
           

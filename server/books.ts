@@ -125,11 +125,14 @@ export async function searchBooksByTitle(title: string): Promise<any[]> {
         const bookAuthor = item.volumeInfo?.authors ? item.volumeInfo.authors.join(', ') : 'Unknown Author';
         const isbn = item.volumeInfo?.industryIdentifiers?.find(id => id.type === 'ISBN_13')?.identifier || '';
         
+        const cover = item.volumeInfo?.imageLinks?.thumbnail || '';
+        // Normalize cover URLs to HTTPS to avoid mixed-content warnings
+        const coverHttps = cover.startsWith('http://') ? cover.replace('http://', 'https://') : cover;
         return {
           title: bookTitle,
           author: bookAuthor,
           isbn: isbn,
-          coverUrl: item.volumeInfo?.imageLinks?.thumbnail || '',
+          coverUrl: coverHttps,
           summary: item.volumeInfo?.description || '',
           // Use Google Books rating as initial value (this will be updated with Amazon rating)
           rating: item.volumeInfo?.averageRating ? item.volumeInfo.averageRating.toString() : '',
