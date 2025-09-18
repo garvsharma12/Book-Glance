@@ -244,7 +244,7 @@ For any licensing inquiries or permission requests, please contact shelfscannera
 ## 🆘 Support
 
 - **Issues**: Create a GitHub issue for bugs or feature requests
-- **Email**: shelfscannerapp@gmail.com
+- **Email**: garv.sharma1202@gmail.com
 
 ---
 
