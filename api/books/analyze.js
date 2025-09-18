@@ -40,7 +40,10 @@ export default async function handler(req, res) {
     const { analyzeBookshelfImage } = await import('../../server/openai-vision.js');
     const { searchBooksByTitle } = await import('../../server/books.js');
     
-    console.log('Modules imported successfully');
+  console.log('Modules imported successfully');
+  console.log('Env: has DATABASE_URL?', !!process.env.DATABASE_URL);
+  console.log('Env: has OPENAI_API_KEY?', !!process.env.OPENAI_API_KEY);
+  console.log('Env: has GOOGLE_VISION_API_KEY?', !!process.env.GOOGLE_VISION_API_KEY);
 
     // Check for environment variables
     // Database: Allow embedded DB fallback (no DATABASE_URL required)
@@ -51,6 +54,7 @@ export default async function handler(req, res) {
         error: 'API keys for image processing are missing'
       });
     }
+    console.log('Analysis provider:', process.env.OPENAI_API_KEY ? 'OpenAI (vision)' : 'Google Vision');
 
     // Parse multipart form data
     const form = formidable.default({
@@ -110,17 +114,21 @@ export default async function handler(req, res) {
 
     console.log('Book titles detected:', bookTitles);
 
-    // Fetch user preferences using device ID (optional)
+    // Fetch user preferences using device ID (optional, non-fatal)
     let preferences = null;
-    try {
-      const deviceId = req.query.deviceId || req.cookies?.deviceId;
-      
-      if (deviceId) {
+    const deviceId = req.query.deviceId || req.cookies?.deviceId;
+    if (deviceId) {
+      try {
         preferences = await storage.getPreferencesByDeviceId(deviceId);
-      } else {
-        console.log('No device ID found, proceeding without preferences');
+      } catch (prefErr) {
+        console.warn('Preference lookup failed, continuing without preferences:', prefErr instanceof Error ? prefErr.message : String(prefErr));
+        preferences = null;
       }
+    } else {
+      console.log('No device ID found, proceeding without preferences');
+    }
 
+    try {
       // Look up each detected title
       const detectedBooks = [];
       for (const title of bookTitles) {
@@ -187,14 +195,13 @@ export default async function handler(req, res) {
         books: rankedBooks,
         bookTitles,
         booksFound: booksFoundString,
-        message: `Found ${rankedBooks.length} books in your photo: ${booksFoundString}. These have been ranked based on your preferences.`,
+        message: `Found ${rankedBooks.length} books in your photo: ${booksFoundString}. These have been ranked ${preferences ? 'based on your preferences' : 'without preferences (we could not load them)'}.`,
       });
-
-    } catch (dbError) {
-      console.error('Database error:', dbError);
+    } catch (err) {
+      console.error('Error during book lookup/ranking:', err);
       return res.status(500).json({
-        message: 'Database error while processing preferences or book data',
-        error: dbError instanceof Error ? dbError.message : String(dbError),
+        message: 'Error processing detected book titles',
+        error: err instanceof Error ? err.message : String(err),
       });
     }
 
