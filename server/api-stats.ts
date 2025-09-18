@@ -12,7 +12,10 @@ export function getApiUsageStats(): Record<string, any> {
     config: {
       openaiEnabled: process.env.ENABLE_OPENAI !== 'false',
       openaiConfigured: !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 5, 
-      googleVisionConfigured: !!process.env.GOOGLE_VISION_API_KEY
+      googleVisionConfigured: !!process.env.GOOGLE_VISION_API_KEY,
+      // Gemini configuration for summaries/ratings
+      geminiConfigured: !!process.env.GOOGLE_GEMINI_API_KEY && process.env.GOOGLE_GEMINI_API_KEY.length > 5,
+      geminiModel: process.env.GEMINI_MODEL || 'gemini-1.5-flash'
     }
   };
 }
