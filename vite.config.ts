@@ -32,6 +32,9 @@ export default defineConfig(async ({ mode }) => {
       },
     },
     root: path.resolve(__dirname, "client"),
+    // Ensure Vite copies static assets from the repository's top-level public/ folder
+    // so files like /favicon.ico are available in production builds.
+    publicDir: path.resolve(__dirname, "public"),
     build: {
       outDir: path.resolve(__dirname, "dist/public"),
       emptyOutDir: true,
