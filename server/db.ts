@@ -22,7 +22,7 @@ if (usePGlite) {
 
   const client = dataDir ? new PGlite({ dataDir } as any) : new PGlite();
 
-  // Apply SQL migrations to embedded DB (best-effort, async without blocking module init)
+  // Apply SQL migrations to embedded DB (best-effort) without blocking module init
   try {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
@@ -34,15 +34,75 @@ if (usePGlite) {
       .map(s => s.trim())
       .filter(s => s.length > 0);
     void (async () => {
-      for (const stmt of statements) {
-        await client.query(stmt);
+      try {
+        for (const stmt of statements) {
+          // eslint-disable-next-line no-await-in-loop
+          await client.query(stmt);
+        }
+        console.log('✅ Embedded PGlite database initialized with migrations');
+      } catch (e) {
+        console.warn('⚠️ Failed to load migrations into embedded DB:', e);
       }
-      console.log('✅ Embedded PGlite database initialized with migrations');
-    })().catch((err: any) => {
-      console.warn('⚠️ Failed to load migrations into embedded DB:', err);
-    });
+    })();
   } catch (err) {
     console.warn('⚠️ No migrations applied to embedded DB:', err);
+    // Fallback: Ensure minimal schema/tables exist so core features work
+    // Choose schema similar to shared/schema.ts logic: production => public, else development
+    const targetSchema = (process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production')
+      ? 'public'
+      : 'development';
+    void (async () => {
+      try {
+        if (targetSchema !== 'public') {
+          await client.query(`CREATE SCHEMA IF NOT EXISTS "${targetSchema}"`);
+        }
+        const schemaPrefix = targetSchema === 'public' ? 'public' : '"' + targetSchema + '"';
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS ${schemaPrefix}."preferences" (
+            id serial PRIMARY KEY,
+            device_id text NOT NULL,
+            genres text[] NOT NULL,
+            authors text[],
+            books text[],
+            goodreads_data jsonb
+          );
+        `);
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS ${schemaPrefix}."saved_books" (
+            id serial PRIMARY KEY,
+            device_id text NOT NULL,
+            book_cache_id integer,
+            title text NOT NULL,
+            author text NOT NULL,
+            cover_url text,
+            rating text,
+            summary text,
+            saved_at timestamp DEFAULT now()
+          );
+        `);
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS ${schemaPrefix}."book_cache" (
+            id serial PRIMARY KEY,
+            title text NOT NULL,
+            author text NOT NULL,
+            isbn varchar(30),
+            book_id text NOT NULL,
+            cover_url text,
+            rating varchar(10),
+            summary text,
+            source varchar(20) NOT NULL,
+            metadata jsonb,
+            cached_at timestamp DEFAULT now(),
+            expires_at timestamp,
+            CONSTRAINT book_cache_isbn_unique UNIQUE(isbn),
+            CONSTRAINT book_cache_book_id_unique UNIQUE(book_id)
+          );
+        `);
+        console.log('✅ Embedded PGlite database initialized with fallback schema');
+      } catch (fallbackErr) {
+        console.warn('⚠️ Failed to initialize fallback schema for embedded DB:', fallbackErr);
+      }
+    })();
   }
 
   db = drizzlePGlite(client, { schema });

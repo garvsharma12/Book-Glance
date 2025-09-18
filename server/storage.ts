@@ -43,6 +43,16 @@ export interface IStorage {
 
 // Database storage implementation
 export class DatabaseStorage implements IStorage {
+  // Determine schema name consistent with shared/schema.ts logic
+  private getTargetSchema(): 'public' | 'development' {
+    if (process.env.VERCEL_ENV) {
+      if (process.env.VERCEL_ENV === 'production') return 'public';
+      if (process.env.VERCEL_ENV === 'preview' || process.env.VERCEL_ENV === 'development') return 'development';
+    }
+    if (process.env.NODE_ENV === 'production') return 'public';
+    return 'development';
+  }
+
   // Attempt to add books column if it doesn't exist (for embedded DBs or older schemas)
   private async ensurePreferencesBooksColumn(): Promise<void> {
     try {
@@ -51,6 +61,61 @@ export class DatabaseStorage implements IStorage {
     } catch (e) {
       // Some drivers may not support IF NOT EXISTS in ALTER; try catch to silence
       log(`Books column ensure step: ${e instanceof Error ? e.message : String(e)}`, 'storage');
+    }
+  }
+
+  // Ensure schema and core tables exist (for embedded DB / cold starts)
+  private async ensureSchemaAndTables(): Promise<void> {
+    try {
+      const schemaName = this.getTargetSchema();
+      const prefix = schemaName === 'public' ? 'public' : `"${schemaName}"`;
+      if (schemaName !== 'public') {
+        await db.execute(sql.raw(`CREATE SCHEMA IF NOT EXISTS ${prefix}`));
+      }
+      await db.execute(sql.raw(`
+        CREATE TABLE IF NOT EXISTS ${prefix}."preferences" (
+          id serial PRIMARY KEY,
+          device_id text NOT NULL,
+          genres text[] NOT NULL,
+          authors text[],
+          books text[],
+          goodreads_data jsonb
+        );
+      `));
+      await db.execute(sql.raw(`
+        CREATE TABLE IF NOT EXISTS ${prefix}."saved_books" (
+          id serial PRIMARY KEY,
+          device_id text NOT NULL,
+          book_cache_id integer,
+          title text NOT NULL,
+          author text NOT NULL,
+          cover_url text,
+          rating text,
+          summary text,
+          saved_at timestamp DEFAULT now()
+        );
+      `));
+      await db.execute(sql.raw(`
+        CREATE TABLE IF NOT EXISTS ${prefix}."book_cache" (
+          id serial PRIMARY KEY,
+          title text NOT NULL,
+          author text NOT NULL,
+          isbn varchar(30),
+          book_id text NOT NULL,
+          cover_url text,
+          rating varchar(10),
+          summary text,
+          source varchar(20) NOT NULL,
+          metadata jsonb,
+          cached_at timestamp DEFAULT now(),
+          expires_at timestamp,
+          CONSTRAINT book_cache_isbn_unique UNIQUE(isbn),
+          CONSTRAINT book_cache_book_id_unique UNIQUE(book_id)
+        );
+      `));
+      log('Ensured schema and core tables exist', 'storage');
+    } catch (e) {
+      log(`Schema/table ensure step: ${e instanceof Error ? e.message : String(e)}`, 'storage');
     }
   }
   // User methods
@@ -79,8 +144,18 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getPreferencesByDeviceId(deviceId: string): Promise<Preference | undefined> {
-    const [preference] = await db.select().from(preferences).where(eq(preferences.deviceId, deviceId));
-    return preference || undefined;
+    try {
+      const [preference] = await db.select().from(preferences).where(eq(preferences.deviceId, deviceId));
+      return preference || undefined;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.toLowerCase().includes('relation') && msg.toLowerCase().includes('preferences')) {
+        await this.ensureSchemaAndTables();
+        const [preference] = await db.select().from(preferences).where(eq(preferences.deviceId, deviceId));
+        return preference || undefined;
+      }
+      throw err;
+    }
   }
 
   async createPreference(insertPreference: InsertPreference): Promise<Preference> {
@@ -94,6 +169,13 @@ export class DatabaseStorage implements IStorage {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('column') && msg.includes('books')) {
         await this.ensurePreferencesBooksColumn();
+        const [preference] = await db
+          .insert(preferences)
+          .values(insertPreference)
+          .returning();
+        return preference;
+      } else if (msg.toLowerCase().includes('relation') && msg.toLowerCase().includes('preferences')) {
+        await this.ensureSchemaAndTables();
         const [preference] = await db
           .insert(preferences)
           .values(insertPreference)
@@ -116,6 +198,14 @@ export class DatabaseStorage implements IStorage {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('column') && msg.includes('books')) {
         await this.ensurePreferencesBooksColumn();
+        const [updatedPreference] = await db
+          .update(preferences)
+          .set(partialPreference)
+          .where(eq(preferences.id, id))
+          .returning();
+        return updatedPreference || undefined;
+      } else if (msg.toLowerCase().includes('relation') && msg.toLowerCase().includes('preferences')) {
+        await this.ensureSchemaAndTables();
         const [updatedPreference] = await db
           .update(preferences)
           .set(partialPreference)
