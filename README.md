@@ -248,12 +248,12 @@ Basic admin functionality is available at `/admin` for monitoring:
 - ❌ **Distribution**: You may not distribute, modify, or create derivative works
 - ❌ **Deployment**: You may not deploy this application for public or commercial use
 
-For any licensing inquiries or permission requests, please contact shelfscannerapp@gmail.com
+For any licensing inquiries or permission requests, please contact garv.sharma1202@gmail.com
 
 ## 🆘 Support
 
 - **Issues**: Create a GitHub issue for bugs or feature requests
-- **Email**: shelfscannerapp@gmail.com
+- **Email**: garv.sharma1202@gmail.com
 
 ---
 

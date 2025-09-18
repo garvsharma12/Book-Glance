@@ -224,7 +224,16 @@ export class DatabaseStorage implements IStorage {
 
   // Saved Books methods
   async getSavedBooksByDeviceId(deviceId: string): Promise<SavedBook[]> {
-    return db.select().from(savedBooks).where(eq(savedBooks.deviceId, deviceId));
+    try {
+      return await db.select().from(savedBooks).where(eq(savedBooks.deviceId, deviceId));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.toLowerCase().includes('relation') && msg.toLowerCase().includes('saved_books')) {
+        await this.ensureSchemaAndTables();
+        return await db.select().from(savedBooks).where(eq(savedBooks.deviceId, deviceId));
+      }
+      throw err;
+    }
   }
 
   async findSavedBook(deviceId: string, title: string, author: string): Promise<SavedBook | undefined> {
@@ -249,11 +258,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSavedBook(insertSavedBook: InsertSavedBook): Promise<SavedBook> {
-    const [savedBook] = await db
-      .insert(savedBooks)
-      .values(insertSavedBook)
-      .returning();
-    return savedBook;
+    try {
+      const [savedBook] = await db
+        .insert(savedBooks)
+        .values(insertSavedBook)
+        .returning();
+      return savedBook;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.toLowerCase().includes('relation') && msg.toLowerCase().includes('saved_books')) {
+        await this.ensureSchemaAndTables();
+        const [savedBook] = await db
+          .insert(savedBooks)
+          .values(insertSavedBook)
+          .returning();
+        return savedBook;
+      }
+      throw err;
+    }
   }
 
   async updateSavedBook(id: number, updates: Partial<InsertSavedBook>): Promise<SavedBook | undefined> {
@@ -270,14 +292,37 @@ export class DatabaseStorage implements IStorage {
       
       return updatedBook || undefined;
     } catch (error) {
-      log(`Error updating saved book: ${error instanceof Error ? error.message : String(error)}`, 'storage');
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.toLowerCase().includes('relation') && msg.toLowerCase().includes('saved_books')) {
+        await this.ensureSchemaAndTables();
+        const [updatedBook] = await db
+          .update(savedBooks)
+          .set(updates)
+          .where(eq(savedBooks.id, id))
+          .returning();
+        if (updatedBook) {
+          log(`Updated saved book after ensure: "${updatedBook.title}" by ${updatedBook.author}`, 'storage');
+        }
+        return updatedBook || undefined;
+      }
+      log(`Error updating saved book: ${msg}`, 'storage');
       return undefined;
     }
   }
 
   async deleteSavedBook(id: number): Promise<boolean> {
-    const result = await db.delete(savedBooks).where(eq(savedBooks.id, id));
-    return !!result;
+    try {
+      const result = await db.delete(savedBooks).where(eq(savedBooks.id, id));
+      return !!result;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.toLowerCase().includes('relation') && msg.toLowerCase().includes('saved_books')) {
+        await this.ensureSchemaAndTables();
+        const result = await db.delete(savedBooks).where(eq(savedBooks.id, id));
+        return !!result;
+      }
+      throw err;
+    }
   }
 
   // Book Cache methods

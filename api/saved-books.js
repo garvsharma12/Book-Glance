@@ -33,7 +33,8 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
       try {
-        const deviceId = req.query.deviceId || req.cookies?.deviceId;
+        // Accept deviceId from multiple sources for robustness
+        const deviceId = req.query.deviceId || req.cookies?.deviceId || req.headers['x-device-id'];
         
         if (!deviceId) {
           return res.status(400).json({ error: 'Device ID is required' });
@@ -61,7 +62,13 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       try {
-        
+        // Normalize deviceId onto body if only present in cookie/query/header
+        const deviceId = req.body?.deviceId || req.cookies?.deviceId || req.query.deviceId || req.headers['x-device-id'];
+        if (!req.body) req.body = {};
+        if (!req.body.deviceId && deviceId) {
+          req.body.deviceId = deviceId;
+        }
+
         const validation = insertSavedBookSchema.safeParse(req.body);
         
         if (!validation.success) {
