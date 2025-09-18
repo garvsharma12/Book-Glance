@@ -106,7 +106,7 @@ Have you ever been at a book sale, library, or friend's house looking at shelves
 
 ### Required Variables
 
-Create a `.env` file with these required variables:
+Create a `.env` file with these required variables (accepted variants listed):
 
 ```env
 # Database (Required)
@@ -116,15 +116,17 @@ DATABASE_URL=postgresql://user:password@host:port/database
 OPENAI_API_KEY=sk-your_openai_key_here
 
 # Optional: Google Vision API (minimal implementation)
+# Any of these names work:
 GOOGLE_VISION_API_KEY=your_google_vision_key
+# or GOOGLE_CLOUD_VISION_API_KEY / VISION_API_KEY / GOOGLE_API_KEY / GCP_API_KEY / GOOGLE_CLOUD_API_KEY
 ```
 
 ### API Key Setup
 
-**Gemini API** (Required - for book summaries and recommendations):
+**Gemini API** (Required - for book summaries and recommendations; either name works):
 1. Visit [GeminiAPI Platform](https://aistudio.google.com)
 2. Create an account and add billing
-3. Generate an API key in the API Keys section
+3. Generate an API key in the API Keys section and set either `GOOGLE_GEMINI_API_KEY` or `GEMINI_API_KEY`
 
 **Google Vision API** (Optional - limited implementation):
 1. Go to [Google Cloud Console](https://console.cloud.google.com)

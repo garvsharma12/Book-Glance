@@ -3,9 +3,15 @@ import { rateLimiter } from "../rate-limiter.js";
 import { log } from "../simple-logger.js";
 
 function getClient() {
-  const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+  // Support both GOOGLE_GEMINI_API_KEY and GEMINI_API_KEY
+  const apiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
   try {
+    if (!process.env.GOOGLE_GEMINI_API_KEY && process.env.GEMINI_API_KEY) {
+      // Normalize for consistency elsewhere
+      process.env.GOOGLE_GEMINI_API_KEY = process.env.GEMINI_API_KEY as string;
+      log('Normalized Gemini key: using GEMINI_API_KEY as GOOGLE_GEMINI_API_KEY', 'gemini');
+    }
     return new GoogleGenerativeAI(apiKey);
   } catch (e) {
     log(`Failed to init Gemini client: ${e instanceof Error ? e.message : String(e)}`, 'gemini');

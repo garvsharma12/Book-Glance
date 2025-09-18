@@ -35,9 +35,28 @@ interface VisionResponse {
   }[];
 }
 
+// Helper to resolve the Google Vision API key from multiple common env names
+function getVisionApiKey(): { key: string; source: string } {
+  const envNames = [
+    'GOOGLE_VISION_API_KEY',
+    'GOOGLE_CLOUD_VISION_API_KEY',
+    'VISION_API_KEY',
+    'GOOGLE_API_KEY',
+    'GCP_API_KEY',
+    'GOOGLE_CLOUD_API_KEY',
+  ];
+  for (const name of envNames) {
+    const val = process.env[name];
+    if (val && String(val).trim().length > 0) {
+      return { key: String(val), source: name };
+    }
+  }
+  return { key: '', source: '' };
+}
+
 export async function analyzeImage(base64Image: string): Promise<any> {
   try {
-    const apiKey = process.env.GOOGLE_VISION_API_KEY;
+    const { key: apiKey, source } = getVisionApiKey();
     if (!apiKey) {
       throw new Error('Google Vision API key is not configured');
     }
@@ -52,7 +71,7 @@ export async function analyzeImage(base64Image: string): Promise<any> {
       throw new Error('Invalid image data provided');
     }
     
-    log(`Processing image with Google Vision API, content length: ${imageContent.length}`);
+  log(`Processing image with Google Vision API, content length: ${imageContent.length} (key from ${source || 'GOOGLE_VISION_API_KEY'})`);
     
     const visionRequest: VisionRequest = {
       requests: [

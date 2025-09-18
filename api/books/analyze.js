@@ -14,6 +14,25 @@ export default async function handler(req, res) {
   console.log('URL:', req.url);
   console.log('Content-Type:', req.headers['content-type']);
   
+  // Helper: Resolve Google Vision API key from multiple common env names
+  const getVisionApiKey = () => {
+    const envNames = [
+      'GOOGLE_VISION_API_KEY',
+      'GOOGLE_CLOUD_VISION_API_KEY',
+      'VISION_API_KEY',
+      'GOOGLE_API_KEY',
+      'GCP_API_KEY',
+      'GOOGLE_CLOUD_API_KEY',
+    ];
+    for (const name of envNames) {
+      const val = process.env[name];
+      if (val && String(val).trim().length > 0) {
+        return { key: String(val), source: name };
+      }
+    }
+    return { key: '', source: '' };
+  };
+  
   // Handle CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -42,19 +61,31 @@ export default async function handler(req, res) {
     
   console.log('Modules imported successfully');
   console.log('Env: has DATABASE_URL?', !!process.env.DATABASE_URL);
-  console.log('Env: has OPENAI_API_KEY?', !!process.env.OPENAI_API_KEY);
+  const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+  console.log('Env: has OPENAI_API_KEY?', hasOpenAIKey);
+  const { key: resolvedVisionKey, source: visionKeySource } = getVisionApiKey();
+  const hasVisionKey = !!resolvedVisionKey;
   console.log('Env: has GOOGLE_VISION_API_KEY?', !!process.env.GOOGLE_VISION_API_KEY);
+  console.log('Env: Vision key variants present?', hasVisionKey, visionKeySource ? `(from ${visionKeySource})` : '');
+
+    // Normalize: if a supported alternative is set, expose it as GOOGLE_VISION_API_KEY for downstream modules
+    if (!process.env.GOOGLE_VISION_API_KEY && hasVisionKey) {
+      process.env.GOOGLE_VISION_API_KEY = resolvedVisionKey;
+      console.log(`Normalized Vision key: using ${visionKeySource} as GOOGLE_VISION_API_KEY`);
+    }
 
     // Check for environment variables
     // Database: Allow embedded DB fallback (no DATABASE_URL required)
-    if (!process.env.OPENAI_API_KEY && !process.env.GOOGLE_VISION_API_KEY) {
+    if (!hasOpenAIKey && !hasVisionKey) {
       console.error('Missing required API keys: Both OpenAI and Google Vision keys are missing');
       return res.status(500).json({
         message: 'Server configuration error: Image analysis service not available',
         error: 'API keys for image processing are missing'
       });
     }
-    console.log('Analysis provider:', process.env.OPENAI_API_KEY ? 'OpenAI (vision)' : 'Google Vision');
+    const openAIEnabled = process.env.ENABLE_OPENAI !== 'false';
+    const provider = hasOpenAIKey && openAIEnabled ? 'OpenAI (vision)' : 'Google Vision';
+    console.log('Analysis provider:', provider);
 
     // Parse multipart form data
     const form = formidable.default({
