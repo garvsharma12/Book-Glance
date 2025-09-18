@@ -95,6 +95,13 @@ Have you ever been at a book sale, library, or friend's house looking at shelves
 2. **Configure Environment Variables**
    In your Vercel dashboard, add all required environment variables (see Environment Configuration below)
 
+3. **Vercel Build Settings**
+   - Build Command: `npm run build`
+   - Output Directory: `dist/public`
+   - Framework Preset: `Vite`
+   - Ensure your `client/index.html` entry script uses a relative path: `<script type="module" src="./src/main.tsx"></script>`
+   - A `vercel.json` is included to set these defaults
+
 ## 🔐 Environment Configuration
 
 ### Required Variables
