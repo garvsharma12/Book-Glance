@@ -43,14 +43,7 @@ export default async function handler(req, res) {
     console.log('Modules imported successfully');
 
     // Check for environment variables
-    if (!process.env.DATABASE_URL) {
-      console.error('Missing required environment variable: DATABASE_URL');
-      return res.status(500).json({
-        message: 'Server configuration error: Database connection not available',
-        error: 'DATABASE_URL environment variable is missing'
-      });
-    }
-
+    // Database: Allow embedded DB fallback (no DATABASE_URL required)
     if (!process.env.OPENAI_API_KEY && !process.env.GOOGLE_VISION_API_KEY) {
       console.error('Missing required API keys: Both OpenAI and Google Vision keys are missing');
       return res.status(500).json({
